@@ -2,7 +2,7 @@
 Lua 5.3 Bytecode Reference
 ==========================
 
-This is my attempt to bring up date the Lua bytecode reference.
+This is my attempt to bring up to date the Lua bytecode reference. Note that this is work in progress.
 Following copyrights are acknowledged:
 
 :: 
@@ -80,9 +80,130 @@ RK(C)
 sBx
   Signed displacement (in field sBx) for all kinds of jumps
 
+Instruction Summary
+===================
 
-'``OP_CALL``' instruction
-=========================
+Lua bytecode instructions are 32-bits in size. 
+All instructions have an opcode in the first 6 bits.
+Instructions can have the following fields::
+
+  'A' : 8 bits
+  'B' : 9 bits
+  'C' : 9 bits
+  'Ax' : 26 bits ('A', 'B', and 'C' together)
+  'Bx' : 18 bits ('B' and 'C' together)
+  'sBx' : signed Bx
+
+A signed argument is represented in excess K; that is, the number
+value is the unsigned value minus K. K is exactly the maximum value
+for that argument (so that -max is represented by 0, and +max is
+represented by 2*max), which is half the maximum for the corresponding  
+unsigned argument.
+
+Note that B and C operands need to have an extra bit compared to A.
+This is because B and A can reference registers or constants, and the
+extra bit is used to decide which one. But A always references registers
+so it doesn't need the extra bit.
+
++------------+-------------------------------------------------------------+
+| Opcode     | Description                                                 |
++============+=============================================================+
+| MOVE       | Copy a value between registers                              |
++------------+-------------------------------------------------------------+
+| LOADK      | Load a constant into a register                             |
++------------+-------------------------------------------------------------+
+| LOADKX     | Load a constant into a register                             |
++------------+-------------------------------------------------------------+
+| LOADBOOL   | Load a boolean into a register                              |
++------------+-------------------------------------------------------------+
+| LOADNIL    | Load nil values into a range of registers                   |
++------------+-------------------------------------------------------------+
+| GETUPVAL   | Read an upvalue into a register                             |
++------------+-------------------------------------------------------------+
+| GETTABUP   | Read a value from table in up-value into a register         |
++------------+-------------------------------------------------------------+
+| GETTABLE   | Read a table element into a register                        |
++------------+-------------------------------------------------------------+
+| SETTABUP   | Write a register value into table in up-value               |
++------------+-------------------------------------------------------------+
+| SETUPVAL   | Write a register value into an upvalue                      |
++------------+-------------------------------------------------------------+
+| SETTABLE   | Write a register value into a table element                 |
++------------+-------------------------------------------------------------+
+| NEWTABLE   | Create a new table                                          |
++------------+-------------------------------------------------------------+
+| SELF       | Prepare an object method for calling                        |
++------------+-------------------------------------------------------------+
+| ADD        | Addition operator                                           |
++------------+-------------------------------------------------------------+
+| SUB        | Subtraction operator                                        |
++------------+-------------------------------------------------------------+
+| MUL        | Multiplication operator                                     |
++------------+-------------------------------------------------------------+
+| MOD        | Modulus (remainder) operator                                |
++------------+-------------------------------------------------------------+
+| POW        | Exponentation operator                                      |
++------------+-------------------------------------------------------------+
+| DIV        | Division operator                                           |
++------------+-------------------------------------------------------------+
+| IDIV       | Integer division operator                                   |
++------------+-------------------------------------------------------------+
+| BAND       | Bit-wise AND operator                                       |
++------------+-------------------------------------------------------------+
+| BOR        | Bit-wise OR operator                                        |
++------------+-------------------------------------------------------------+
+| BXOR       | Bit-wise Exclusive OR operator                              |
++------------+-------------------------------------------------------------+
+| SHL        | Shift bits left                                             |
++------------+-------------------------------------------------------------+
+| SHR        | Shift bits right                                            |
++------------+-------------------------------------------------------------+
+| UNM        | Unary minus                                                 |
++------------+-------------------------------------------------------------+
+| BNOT       | Bit-wise NOT operator                                       |
++------------+-------------------------------------------------------------+
+| NOT        | Logical NOT operator                                        |
++------------+-------------------------------------------------------------+
+| LEN        | Length operator                                             |
++------------+-------------------------------------------------------------+
+| CONCAT     | Concatenate a range of registers                            |
++------------+-------------------------------------------------------------+
+| JMP        | Unconditional jump                                          |
++------------+-------------------------------------------------------------+
+| EQ         | Equality test, with conditional jump                        |
++------------+-------------------------------------------------------------+
+| LT         | Less than test, with conditional jump                       |
++------------+-------------------------------------------------------------+
+| LE         | Less than or equal to test, with conditional jump           |
++------------+-------------------------------------------------------------+
+| TEST       | Boolean test, with conditional jump                         |
++------------+-------------------------------------------------------------+
+| TESTSET    | Boolean test, with conditional jump and assignment          |
++------------+-------------------------------------------------------------+
+| CALL       | Call a closure                                              |
++------------+-------------------------------------------------------------+
+| TAILCALL   | Perform a tail call                                         |
++------------+-------------------------------------------------------------+
+| RETURN     | Return from function call                                   |
++------------+-------------------------------------------------------------+
+| FORLOOP    | Iterate a numeric for loop                                  |
++------------+-------------------------------------------------------------+
+| FORPREP    | Initialization for a numeric for loop                       |
++------------+-------------------------------------------------------------+
+| TFORLOOP   | Iterate a generic for loop                                  |
++------------+-------------------------------------------------------------+
+| TFORCALL   | Initialization for a generic for loop                       |
++------------+-------------------------------------------------------------+
+| SETLIST    | Set a range of array elements for a table                   |
++------------+-------------------------------------------------------------+
+| CLOSURE    | Create a closure of a function prototype                    |
++------------+-------------------------------------------------------------+
+| VARARG     | Assign vararg function arguments to registers               |
++------------+-------------------------------------------------------------+
+
+
+OP_CALL instruction
+===================
 
 Syntax
 ------
@@ -97,13 +218,13 @@ Description
 Performs a function call, with register R(A) holding the reference to the function object to be called. Parameters to the function are placed in the registers following R(A). If B is 1, the function has no parameters. If B is 2 or more, there are (B-1) parameters. If B >= 2, then upon entry to the called function, R(A+1) will become the ``base``. 
 
 If B is 0, the function parameters range from R(A+1) to the top of the stack. This form is used when the 
-number of parameters to pass is set by the previous VM instruction, which has to be one of '``OP_CALL``' or
-'``OP_VARARG``'. 
+number of parameters to pass is set by the previous VM instruction, which has to be one of ``OP_CALL`` or
+``OP_VARARG``. 
 
 Examples
 --------
 
-Example of '``OP_VARARG``' followed by '``OP_CALL``'::
+Example of ``OP_VARARG`` followed by ``OP_CALL``::
 
   function y(...) print(...) end
 
@@ -112,7 +233,7 @@ Example of '``OP_VARARG``' followed by '``OP_CALL``'::
   3 [1] CALL      0 0 1   ; B=0 so L->top set by previous instruction
   4 [1] RETURN    0 1
 
-Example of '``OP_CALL``' followed by '``OP_CALL``'::
+Example of ``OP_CALL`` followed by ``OP_CALL``::
 
   function z1() y(x()) end
 
@@ -138,7 +259,7 @@ Results returned by the function call are placed in a range of registers startin
 
 * A C function returns an integer value indicating number of results returned so for C function calls
   this is used (see the value of ``n`` passed to `luaD_poscall() <http://www.lua.org/source/5.3/ldo.c.html#luaD_poscall>`_ in `luaD_precall() <http://www.lua.org/source/5.3/ldo.c.html#luaD_precall>`_)
-* For Lua functions, the the results are saved by the called function's '``OP_RETURN``' instruction.
+* For Lua functions, the the results are saved by the called function's ``OP_RETURN`` instruction.
 
 More examples
 -------------
@@ -146,6 +267,8 @@ More examples
 ::
 
   x=function() y() end
+
+Produces::
 
   function <stdin:1,1> (3 instructions at 000000CECB2BE040)
   0 params, 2 slots, 1 upvalue, 0 locals, 1 constant, 0 functions
@@ -161,6 +284,8 @@ More examples
 In line [2], the call has zero parameters (field B is 1), zero results are retained (field C is 1), while register 0 temporarily holds the reference to the function object from global y. Next we see a function call with multiple parameters or arguments::
 
   x=function() z(1,2,3) end
+
+Generates::
 
   function <stdin:1,1> (6 instructions at 000000CECB2D7BC0)
   0 params, 4 slots, 1 upvalue, 0 locals, 4 constants, 0 functions
@@ -185,6 +310,8 @@ Lines [1] to [4] loads the function reference and the arguments in order, then l
 
   x=function() local p,q,r,s = z(y()) end
 
+Produces::
+
   function <stdin:1,1> (5 instructions at 000000CECB2D6CC0)
   0 params, 4 slots, 1 upvalue, 4 locals, 2 constants, 0 functions
     1       [1]     GETTABUP        0 0 -1  ; _ENV "z"
@@ -208,6 +335,8 @@ has a field C of 0, meaning multiple return values are accepted. These return va
 
   x=function() print(string.char(64)) end
 
+Leads to::
+
   function <stdin:1,1> (7 instructions at 000000CECB2D6220)
   0 params, 3 slots, 1 upvalue, 0 locals, 4 constants, 0 functions
     1       [1]     GETTABUP        0 0 -1  ; _ENV "print"
@@ -228,8 +357,8 @@ has a field C of 0, meaning multiple return values are accepted. These return va
 
 When a function call is the last parameter to another function call, the former can pass multiple return values, while the latter can accept multiple parameters.
 
-'``OP_TAILCALL``' instruction
-=============================
+OP_TAILCALL instruction
+=======================
 
 Syntax
 ------
@@ -243,19 +372,20 @@ Description
 
 Performs a tail call, which happens when a return statement has a single function call as the expression, e.g. return foo(bar). A tail call results in the function being interpreted within the same call frame as the caller - the stack is replaced and then a 'goto' executed to start at the entry point in the VM. Only Lua functions can be tailcalled. Tailcalls allow infinite recursion without growing the stack.
 
-Like '``OP_CALL``', register R(A) holds the reference to the function object to be called. B encodes the number of parameters in the same manner as a '``OP_CALL``' instruction.
+Like ``OP_CALL``, register R(A) holds the reference to the function object to be called. B encodes the number of parameters in the same manner as a ``OP_CALL`` instruction.
 
 C isn’t used by TAILCALL, since all return results are significant. In any case, Lua always generates a 0 for C, to denote multiple return results.
 
 Examples
 --------
-An '``OP_TAILCALL``' is used only for one specific return style, described above. Multiple return results are always produced by a tail call. Here is an example:
+An ``OP_TAILCALL`` is used only for one specific return style, described above. Multiple return results are always produced by a tail call. Here is an example:
 
 
 ::
 
-  > function y() return x('foo', 'bar') end
-  > ravi.dumplua(y)
+  function y() return x('foo', 'bar') end
+
+Generates::
 
   function <stdin:1,1> (6 instructions at 000000C3C24DE4A0)
   0 params, 3 slots, 1 upvalue, 0 locals, 3 constants, 0 functions
@@ -275,10 +405,10 @@ An '``OP_TAILCALL``' is used only for one specific return style, described above
 
 
 Arguments for a tail call are handled in exactly the same way as arguments for a normal call, so in line [4], the tail call has a field B value of 3, signifying 2 parameters. Field C is 0, for multiple returns; this due to the constant LUA_MULTRET in lua.h. In practice, field C is not used by the virtual machine (except as an assert) since the syntax guarantees multiple return results.
-Line [5] is a '``OP_RETURN``' instruction specifying multiple return results. This is required when the function called by '``OP_TAILCALL`` is a C function. In the case of a C function, execution continues to line [5] upon return, thus the RETURN is necessary. Line [6] is redundant. When Lua functions are tailcalled, the virtual machine does not return to line [5] at all.
+Line [5] is a ``OP_RETURN`` instruction specifying multiple return results. This is required when the function called by ``OP_TAILCALL`` is a C function. In the case of a C function, execution continues to line [5] upon return, thus the RETURN is necessary. Line [6] is redundant. When Lua functions are tailcalled, the virtual machine does not return to line [5] at all.
 
-'``OP_RETURN``' instruction
-===========================
+OP_RETURN instruction
+=====================
 
 Syntax
 ------
@@ -292,33 +422,33 @@ Description
 
 Returns to the calling function, with optional return values. 
 
-First '``OP_RETURN``'' closes any open upvalues by calling `luaF_close() <http://www.lua.org/source/5.3/lfunc.c.html#luaF_close>`_.
+First ``OP_RETURN`` closes any open upvalues by calling `luaF_close() <http://www.lua.org/source/5.3/lfunc.c.html#luaF_close>`_.
 
 If B is 1, there are no return values. If B is 2 or more, there are (B-1) return values, located in consecutive registers from R(A) onwards. If B is 0, the set of values range from R(A) to the top of the stack. 
 
 It is assumed that if the VM is returning to a Lua function then it is within the same invocation of the ``luaV_execute()``. Else it is assumed that ``luaV_execute()`` is being invoked from a C function.
 
-If B is 0 then the previous instruction (which must be either '``OP_CALL``' or '``OP_VARARG``' ) would have set ``L->top`` to indicate how many values to return. The number of values to be returned in this case is R(A) to L->top. 
+If B is 0 then the previous instruction (which must be either ``OP_CALL`` or ``OP_VARARG`` ) would have set ``L->top`` to indicate how many values to return. The number of values to be returned in this case is R(A) to L->top. 
 
 If B > 0 then the number of values to be returned is simply B-1.
 
-'``OP_RETURN``' calls `luaD_poscall() <http://www.lua.org/source/5.3/ldo.c.html#luaD_poscall>`_ which is responsible for copying return values to the caller - the first result is placed at the current ``closure``'s address. ``luaD_poscall()`` leaves ``L->top`` just past the last result that was copied.
+``OP_RETURN`` calls `luaD_poscall() <http://www.lua.org/source/5.3/ldo.c.html#luaD_poscall>`_ which is responsible for copying return values to the caller - the first result is placed at the current ``closure``'s address. ``luaD_poscall()`` leaves ``L->top`` just past the last result that was copied.
 
-If '``OP_RETURN``' is returning to a Lua function and if the number of return values expected was indeterminate - i.e. '``OP_CALL``' had operand C = 0, then ``L->top`` is left where ``luaD_poscall()`` placed it - just beyond the top of the result list. This allows the '``OP_CALL``' instruction to figure out how many results were returned. If however '``OP_CALL``' had invoked with a value of C > 0 then the expected number of results is known, and in that case, ``L->top`` is reset to  the calling function's ``C->top``.
+If ``OP_RETURN`` is returning to a Lua function and if the number of return values expected was indeterminate - i.e. ``OP_CALL`` had operand C = 0, then ``L->top`` is left where ``luaD_poscall()`` placed it - just beyond the top of the result list. This allows the ``OP_CALL`` instruction to figure out how many results were returned. If however ``OP_CALL`` had invoked with a value of C > 0 then the expected number of results is known, and in that case, ``L->top`` is reset to  the calling function's ``C->top``.
 
-If ``luaV_execute()`` was called externally then '``OP_RETURN``' leaves ``L->top`` unchanged - so it will continue to be just past the top of the results list. This is because luaV_execute() does not have a way of informing callers how many values were returned; so the caller can determine the number of results by inspecting ``L->top``.
+If ``luaV_execute()`` was called externally then ``OP_RETURN`` leaves ``L->top`` unchanged - so it will continue to be just past the top of the results list. This is because luaV_execute() does not have a way of informing callers how many values were returned; so the caller can determine the number of results by inspecting ``L->top``.
 
 Examples
 --------
 
-Example of '``OP_VARARG``' followed by '``OP_RETURN``'::
+Example of ``OP_VARARG`` followed by ``OP_RETURN``::
 
   function x(...) return ... end
 
   1 [1]  VARARG          0 0
   2 [1]  RETURN          0 0
 
-Suppose we call ``x(1,2,3)``; then, observe the setting of ``L->top`` when '``OP_RETURN``' executes::
+Suppose we call ``x(1,2,3)``; then, observe the setting of ``L->top`` when ``OP_RETURN`` executes::
 
   (LOADK A=1 Bx=-2)      L->top = 4, ci->top = 4
   (LOADK A=2 Bx=-3)      L->top = 4, ci->top = 4
@@ -327,7 +457,7 @@ Suppose we call ``x(1,2,3)``; then, observe the setting of ``L->top`` when '``OP
   (VARARG A=0 B=0)       L->top = 2, ci->top = 2  ; we are in x()
   (RETURN A=0 B=0)       L->top = 3, ci->top = 2
 
-Observe that '``OP_VARARG``' set ``L->top`` to ``base+3``.
+Observe that ``OP_VARARG`` set ``L->top`` to ``base+3``.
 
 But if we call ``x(1)`` instead::
 
@@ -338,25 +468,26 @@ But if we call ``x(1)`` instead::
   (VARARG A=0 B=0)       L->top = 2, ci->top = 2 ; we are in x()
   (RETURN A=0 B=0)       L->top = 1, ci->top = 2
 
-Notice that this time '``OP_VARARG``' set ``L->top`` to ``base+1``.
+Notice that this time ``OP_VARARG`` set ``L->top`` to ``base+1``.
 
-'``OP_JMP``' instruction
-========================
+OP_JMP instruction
+==================
 
 Syntax
 ------
 
 ::
 
-  JMP sBx PC += sBx
+  JMP A sBx   pc+=sBx; if (A) close all upvalues >= R(A - 1)
 
 Description
 -----------
 
-Performs an unconditional jump, with sBx as a signed displacement. sBx is added to the program counter (PC), which points to the next instruction to be executed. 
-E.g., if sBx is 0, the VM will proceed to the next instruction.
+Performs an unconditional jump, with sBx as a signed displacement. sBx is added to the program counter (PC), which points to the next instruction to be executed. If sBx is 0, the VM will proceed to the next instruction.
 
-'``OP_JMP``' is used in loops, conditional statements, and in expressions when a boolean true/false need to be generated.
+If R(A) is not 0 then all upvalues >= R(A-1) will be closed by calling `luaF_close() <http://www.lua.org/source/5.3/lfunc.c.html#luaF_close>`_.
+
+``OP_JMP`` is used in loops, conditional statements, and in expressions when a boolean true/false need to be generated.
 
 Examples
 --------
@@ -384,8 +515,8 @@ Generates::
 
 Line[2] performs the relational test. In line [3], the JMP skips over the false path (line [4]) to the true path (line [5]). The result is placed into temporary local 2, and returned to the caller by RETURN in line [6].
 
-'``OP_VARARG``' instruction
-===========================
+OP_VARARG instruction
+=====================
 
 Syntax
 ------
@@ -512,8 +643,99 @@ Above are two other cases where ``VARARG`` needs to copy all passed parameters
 over to a set of registers in order for the next operation to proceed. Both the above forms of 
 table creation and return accepts a variable number of values or objects.
 
-Relational And logic Instructions
-=================================
+OP_LOADBOOL instruction
+=======================
+
+Syntax
+------
+
+::
+
+  LOADBOOL A B C    R(A) := (Bool)B; if (C) pc++      
+
+Description
+-----------
+
+Loads a boolean value (true or false) into register R(A). true is usually encoded as an integer 1, false is always 0. If C is non-zero, then the next instruction is skipped (this is used when you have an assignment statement where the expression uses relational operators, e.g. M = K>5.)
+You can use any non-zero value for the boolean true in field B, but since you cannot use booleans as numbers in Lua, it’s best to stick to 1 for true.
+
+``LOADBOOL`` is used for loading a boolean value into a register. It’s also used where a boolean result is supposed to be generated, because relational test instructions, for example, do not generate boolean results – they perform conditional jumps instead. The operand C is used to optionally skip the next instruction (by incrementing PC by 1) in order to support such code. For simple assignments of boolean values, C is always 0.
+
+Examples
+--------
+
+The following line of code::
+
+  f=load('local a,b = true,false')
+
+generates::
+
+  main <(string):0,0> (3 instructions at 0000020F274C2610)
+  0+ params, 2 slots, 1 upvalue, 2 locals, 0 constants, 0 functions
+        1       [1]     LOADBOOL        0 1 0
+        2       [1]     LOADBOOL        1 0 0
+        3       [1]     RETURN          0 1
+  constants (0) for 0000020F274C2610:
+  locals (2) for 0000020F274C2610:
+        0       a       3       4
+        1       b       3       4
+  upvalues (1) for 0000020F274C2610:
+        0       _ENV    1       0
+
+This example is straightforward: Line [1] assigns true to local a (register 0) while line [2] assigns false to local b (register 1). In both cases, field C is 0, so PC is not incremented and the next instruction is not skipped.
+
+Next, look at this line::
+
+  f=load('local a = 5 > 2')
+
+This leads to following bytecode::
+
+  main <(string):0,0> (5 instructions at 0000020F274BAE00)
+  0+ params, 2 slots, 1 upvalue, 1 local, 2 constants, 0 functions
+        1       [1]     LT              1 -2 -1 ; 2 5
+        2       [1]     JMP             0 1     ; to 4
+        3       [1]     LOADBOOL        0 0 1
+        4       [1]     LOADBOOL        0 1 0
+        5       [1]     RETURN          0 1
+  constants (2) for 0000020F274BAE00:
+        1       5
+        2       2
+  locals (1) for 0000020F274BAE00:
+        0       a       5       6
+  upvalues (1) for 0000020F274BAE00:
+        0       _ENV    1       0
+
+This is an example of an expression that gives a boolean result and is assigned to a variable. Notice that Lua does not optimize the expression into a true value; Lua does not perform compile-time constant evaluation for relational operations, but it can perform simple constant evaluation for arithmetic operations.
+
+Since the relational operator ``LT``  does not give a boolean result but performs a conditional jump, ``LOADBOOL`` uses its C operand to perform an unconditional jump in line [3] – this saves one instruction and makes things a little tidier. The reason for all this is that the instruction set is simply optimized for if...then blocks. Essentially, ``local a = 5 > 2`` is executed in the following way::
+
+  local a 
+  if 2 < 5 then  
+    a = true 
+  else  
+    a = false 
+  end
+
+In the disassembly listing, when ``LT`` tests 2 < 5, it evaluates to true and doesn’t perform a conditional jump. Line [2] jumps over the false result path, and in line [4], the local a (register 0) is assigned the boolean true by the instruction ``LOADBOOL``. If 2 and 5 were reversed, line [3] will be followed instead, setting a false, and then the true result path (line [4]) will be skipped, since ``LOADBOOL`` has its field C set to non-zero.
+
+So the true result path goes like this (additional comments in parentheses)::
+
+        1       [1]     LT              1 -2 -1 ; 2 5       (if 2 < 5)
+        2       [1]     JMP             0 1     ; to 4     
+        4       [1]     LOADBOOL        0 1 0   ;           (a = true)           
+        5       [1]     RETURN          0 1
+
+and the false result path (which never executes in this example) goes like this::
+
+        1       [1]     LT              1 -2 -1 ; 2 5       (if 2 < 5)
+        3       [1]     LOADBOOL        0 0 1               (a = false)
+        5       [1]     RETURN          0 1
+
+The true result path looks longer, but it isn’t, due to the way the virtual machine is implemented. This will be discussed further in the section on relational and logic instructions.
+
+
+OP_EQ, OP_LT and OP_LE Instructions
+===================================
 
 Relational and logic instructions are used in conjunction with other instructions to implement control 
 structures or expressions. Instead of generating boolean results, these instructions conditionally perform 
@@ -537,9 +759,9 @@ next instruction.
 comparison. The boolean A field allows the full set of relational comparison operations to be 
 synthesized from these three instructions. The Lua code generator produces either 0 or 1 for the boolean A.
 
-For the fall-through case, a ``JMP`` is always expected, in order to optimize execution in the 
+For the fall-through case, a `OP_JMP instruction`_ is always expected, in order to optimize execution in the 
 virtual machine. In effect, ``EQ``, ``LT`` and ``LE`` must always be paired with a following ``JMP`` 
-instruction.
+instruction. 
 
 Examples
 --------
@@ -686,3 +908,502 @@ Generates::
 
 This example is a little more complex, but the blocks are structured in the same order 
 as the Lua source, so interpreting the disassembled code should not be too hard.
+
+OP_TEST and OP_TESTSET instructions
+===================================
+
+Syntax
+------
+
+::
+
+  TEST        A C     if not (R(A) <=> C) then pc++     
+  TESTSET     A B C   if (R(B) <=> C) then R(A) := R(B) else pc++ 
+
+Description
+-----------
+These two instructions used for performing boolean tests and implementing Lua’s logic operators.
+
+Used to implement and and or logical operators, or for testing a single register in a conditional statement.
+
+For ``TESTSET``, register R(B) is coerced into a boolean and compared to the boolean field C. If R(B) matches C, the next instruction is skipped, otherwise R(B) is assigned to R(A) and the VM continues with the next instruction. The and operator uses a C of 0 (false) while or uses a C value of 1 (true).
+
+``TEST`` is a more primitive version of ``TESTSET``. ``TEST`` is used when the assignment operation is not needed, otherwise it is the same as ``TESTSET`` except that the operand slots are different.
+
+For the fall-through case, a ``JMP`` is always expected, in order to optimize execution in the virtual machine. In effect, ``TEST`` and ``TESTSET`` must always be paired with a following ``JMP`` instruction.
+
+Examples
+--------
+
+``TEST`` and ``TESTSET`` are used in conjunction with a following ``JMP`` instruction, while ``TESTSET`` has an addditional conditional assignment. Like ``EQ``, ``LT`` and ``LE``, the following ``JMP`` instruction is compulsory, as the virtual machine will execute the ``JMP`` together with ``TEST`` or ``TESTSET``. The two instructions are used to implement short-circuit LISP-style logical operators that retains and propagates operand values instead of booleans. First, we’ll look at how and and or behaves::
+
+  f=load('local a,b,c; c = a and b')
+
+Generates::
+
+  main <(string):0,0> (5 instructions at 0000020F274CF1A0)
+  0+ params, 3 slots, 1 upvalue, 3 locals, 0 constants, 0 functions
+        1       [1]     LOADNIL         0 2
+        2       [1]     TESTSET         2 0 0   ; to 4 if true 
+        3       [1]     JMP             0 1     ; to 5
+        4       [1]     MOVE            2 1
+        5       [1]     RETURN          0 1
+  constants (0) for 0000020F274CF1A0:
+  locals (3) for 0000020F274CF1A0:
+        0       a       2       6
+        1       b       2       6
+        2       c       2       6
+  upvalues (1) for 0000020F274CF1A0:
+        0       _ENV    1       0
+
+An ``and`` sequence exits on ``false`` operands (which can be ``false`` or ``nil``) because any ``false`` operands in a string of and operations will make the whole boolean expression ``false``. If operands evaluates to ``true``, evaluation continues. When a string of ``and`` operations evaluates to ``true``, the result is the last operand value.
+
+In line [2], the first operand (the local a) is set to local c when the test is false (with a field C of 0), while the jump to [4] is made when the test is true, and then in line [4], the expression result is set to the second operand (the local b). This is equivalent to::
+
+  if a then  
+    c = b      -- executed by MOVE on line [4] 
+  else  
+    c = a      -- executed by TESTSET on line [2] 
+  end
+
+The ``c = a`` portion is done by ``TESTSET`` itself, while ``MOVE`` performs ``c = b``. Now, if the result is already set with one of the possible values, a ``TEST`` instruction is used instead::
+
+  f=load('local a,b; a = a and b')
+
+Generates::
+
+  main <(string):0,0> (5 instructions at 0000020F274D0A70)
+  0+ params, 2 slots, 1 upvalue, 2 locals, 0 constants, 0 functions
+        1       [1]     LOADNIL         0 1
+        2       [1]     TEST            0 0     ; to 4 if true 
+        3       [1]     JMP             0 1     ; to 5
+        4       [1]     MOVE            0 1
+        5       [1]     RETURN          0 1
+  constants (0) for 0000020F274D0A70:
+  locals (2) for 0000020F274D0A70:
+        0       a       2       6
+        1       b       2       6
+  upvalues (1) for 0000020F274D0A70:
+        0       _ENV    1       0
+
+The ``TEST`` instruction does not perform an assignment operation, since ``a = a`` is redundant. This makes ``TEST`` a little faster. This is equivalent to::
+
+  if a then  
+    a = b 
+  end
+
+Next, we will look at the or operator::
+
+  f=load('local a,b,c; c = a or b')
+
+Generates::
+
+  main <(string):0,0> (5 instructions at 0000020F274D1AB0)
+  0+ params, 3 slots, 1 upvalue, 3 locals, 0 constants, 0 functions
+        1       [1]     LOADNIL         0 2
+        2       [1]     TESTSET         2 0 1   ; to 4 if false 
+        3       [1]     JMP             0 1     ; to 5
+        4       [1]     MOVE            2 1
+        5       [1]     RETURN          0 1
+  constants (0) for 0000020F274D1AB0:
+  locals (3) for 0000020F274D1AB0:
+        0       a       2       6
+        1       b       2       6
+        2       c       2       6
+  upvalues (1) for 0000020F274D1AB0:
+        0       _ENV    1       0
+
+An ``or`` sequence exits on ``true`` operands, because any operands evaluating to ``true`` in a string of or operations will make the whole boolean expression ``true``. If operands evaluates to ``false``, evaluation continues. When a string of or operations evaluates to ``false``, all operands must have evaluated to ``false``.
+
+In line [2], the local ``a`` value is set to local c if it is ``true``, while the jump is made if it is ``false`` (the field C is 1). Thus in line [4], the local ``b`` value is the result of the expression if local ``a`` evaluates to ``false``. This is equivalent to::
+
+  if a then  
+    c = a      -- executed by TESTSET on line [2] 
+  else  
+    c = b      -- executed by MOVE on line [4] 
+  end
+
+Like the case of and, TEST is used when the result already has one of the possible values, saving an assignment operation::
+
+  f=load('local a,b; a = a or b')
+
+Generates::
+
+  main <(string):0,0> (5 instructions at 0000020F274D1010)
+  0+ params, 2 slots, 1 upvalue, 2 locals, 0 constants, 0 functions
+        1       [1]     LOADNIL         0 1
+        2       [1]     TEST            0 1     ; to 4 if false
+        3       [1]     JMP             0 1     ; to 5
+        4       [1]     MOVE            0 1
+        5       [1]     RETURN          0 1
+  constants (0) for 0000020F274D1010:
+  locals (2) for 0000020F274D1010:
+        0       a       2       6
+        1       b       2       6
+  upvalues (1) for 0000020F274D1010:
+        0       _ENV    1       0
+
+Short-circuit logical operators also means that the following Lua code does not require the use of a boolean operation::
+
+  f=load('local a,b,c; if a > b and a > c then return a end')
+
+Leads to::
+
+  main <(string):0,0> (7 instructions at 0000020F274D1150)
+  0+ params, 3 slots, 1 upvalue, 3 locals, 0 constants, 0 functions
+        1       [1]     LOADNIL         0 2
+        2       [1]     LT              0 1 0   ; to 4 if true
+        3       [1]     JMP             0 3     ; to 7
+        4       [1]     LT              0 2 0   ; to 6 if true
+        5       [1]     JMP             0 1     ; to 7
+        6       [1]     RETURN          0 2
+        7       [1]     RETURN          0 1
+  constants (0) for 0000020F274D1150:
+  locals (3) for 0000020F274D1150:
+        0       a       2       8
+        1       b       2       8
+        2       c       2       8
+  upvalues (1) for 0000020F274D1150:
+        0       _ENV    1       0
+
+With short-circuit evaluation, ``a > c`` is never executed if ``a > b`` is false, so the logic of the Lua statement can be readily implemented using the normal conditional structure. If both ``a > b`` and ``a > c`` are true, the path followed is [2] (the ``a > b`` test) to [4] (the ``a > c`` test) and finally to [6], returning the value of ``a``. A ``TEST`` instruction is not required. This is equivalent to::
+
+  if a > b then  
+    if a > c then    
+      return a  
+    end 
+  end
+
+For a single variable used in the expression part of a conditional statement, ``TEST`` is used to boolean-test the variable::
+
+  f=load('if Done then return end')
+
+Generates::
+
+  main <(string):0,0> (5 instructions at 0000020F274D13D0)
+  0+ params, 2 slots, 1 upvalue, 0 locals, 1 constant, 0 functions
+        1       [1]     GETTABUP        0 0 -1  ; _ENV "Done"
+        2       [1]     TEST            0 0     ; to 4 if true
+        3       [1]     JMP             0 1     ; to 5
+        4       [1]     RETURN          0 1
+        5       [1]     RETURN          0 1
+  constants (1) for 0000020F274D13D0:
+        1       "Done"
+  locals (0) for 0000020F274D13D0:
+  upvalues (1) for 0000020F274D13D0:
+        0       _ENV    1       0
+
+In line [2], the ``TEST`` instruction jumps to the ``true`` block if the value in temporary register 0 (from the global ``Done``) is ``true``. The ``JMP`` at line [3] jumps over the ``true`` block, which is the code inside the if block (line [4]).
+
+If the test expression of a conditional statement consist of purely boolean operators, then a number of TEST instructions will be used in the usual short-circuit evaluation style::
+
+  f=load('if Found and Match then return end')
+
+Generates::
+
+  main <(string):0,0> (8 instructions at 0000020F274D1C90)
+  0+ params, 2 slots, 1 upvalue, 0 locals, 2 constants, 0 functions
+        1       [1]     GETTABUP        0 0 -1  ; _ENV "Found"
+        2       [1]     TEST            0 0     ; to 4 if true
+        3       [1]     JMP             0 4     ; to 8
+        4       [1]     GETTABUP        0 0 -2  ; _ENV "Match"
+        5       [1]     TEST            0 0     ; to 7 if true
+        6       [1]     JMP             0 1     ; to 8
+        7       [1]     RETURN          0 1
+        8       [1]     RETURN          0 1
+  constants (2) for 0000020F274D1C90:
+        1       "Found"
+        2       "Match"
+  locals (0) for 0000020F274D1C90:
+  upvalues (1) for 0000020F274D1C90:
+        0       _ENV    1       0
+
+In the last example, the true block of the conditional statement is executed only if both ``Found`` and ``Match`` evaluate to ``true``. The path is from [2] (test for ``Found``) to [4] to [5] (test for ``Match``) to [7] (the true block, which is an explicit ``return`` statement.)
+
+If the statement has an ``else`` section, then the ``JMP`` on line [6] will jump to the false block (the ``else`` block) while an additional ``JMP`` will be added to the true block to jump over this new block of code. If ``or`` is used instead of ``and``, the appropriate C operand will be adjusted accordingly.
+
+Finally, here is how Lua’s ternary operator (:? in C) equivalent works::
+
+  f=load('local a,b,c; a = a and b or c')
+
+Generates::
+
+  main <(string):0,0> (7 instructions at 0000020F274D1A10)
+  0+ params, 3 slots, 1 upvalue, 3 locals, 0 constants, 0 functions
+        1       [1]     LOADNIL         0 2
+        2       [1]     TEST            0 0     ; to 4 if true
+        3       [1]     JMP             0 2     ; to 6
+        4       [1]     TESTSET         0 1 1   ; to 6 if false
+        5       [1]     JMP             0 1     ; to 7
+        6       [1]     MOVE            0 2
+        7       [1]     RETURN          0 1
+  constants (0) for 0000020F274D1A10:
+  locals (3) for 0000020F274D1A10:
+        0       a       2       8
+        1       b       2       8
+        2       c       2       8
+  upvalues (1) for 0000020F274D1A10:
+        0       _ENV    1       0
+
+The ``TEST`` in line [2] is for the ``and`` operator. First, local ``a`` is tested in line [2]. If it is false, then execution continues in [3], jumping to line [6]. Line [6] assigns local ``c`` to the end result because since if ``a`` is false, then ``a and b`` is ``false``, and ``false or c`` is ``c``.
+
+If local ``a`` is ``true`` in line [2], the ``TEST`` instruction makes a jump to line [4], where there is a ``TESTSET``, for the ``or`` operator. If ``b`` evaluates to ``true``, then the end result is assigned the value of ``b``, because ``b or c`` is ``b`` if ``b`` is ``not false``. If ``b`` is also ``false``, the end result will be ``c``.
+
+For the instructions in line [2], [4] and [6], the target (in field A) is register 0, or the local ``a``, which is the location where the result of the boolean expression is assigned. The equivalent Lua code is::
+
+  if a then  
+    if b then    
+      a = b  
+    else    
+      a = c  
+    end 
+  else  
+    a = c 
+  end
+
+The two ``a = c`` assignments are actually the same piece of code, but are repeated here to avoid using a ``goto`` and a label. Normally, if we assume ``b`` is ``not false`` and ``not nil``, we end up with the more recognizable form::
+
+  if a then  
+    a = b     -- assuming b ~= false 
+  else  
+    a = c 
+  end
+
+
+OP_FORPREP and OP_FORLOOP instructions
+======================================
+
+Syntax
+------
+::
+
+  FORPREP    A sBx   R(A)-=R(A+2); pc+=sBx
+  FORLOOP    A sBx   R(A)+=R(A+2);
+                     if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }
+
+
+Description
+-----------
+Lua has dedicated instructions to implement the two types of ``for`` loops, while the other two types of loops uses traditional test-and-jump.
+
+``FORPREP`` initializes a numeric for loop, while ``FORLOOP`` performs an iteration of a numeric for loop.
+
+A numeric for loop requires 4 registers on the stack, and each register must be a number. R(A) holds the initial value and doubles as the internal loop variable (the internal index); R(A+1) is the limit; R(A+2) is the stepping value; R(A+3) is the actual loop variable (the external index) that is local to the for block.
+
+``FORPREP`` sets up a for loop. Since ``FORLOOP`` is used for initial testing of the loop condition as well as conditional testing during the loop itself, ``FORPREP`` performs a negative step and jumps unconditionally to ``FORLOOP`` so that ``FORLOOP`` is able to correctly make the initial loop test. After this initial test, ``FORLOOP`` performs a loop step as usual, restoring the initial value of the loop index so that the first iteration can start.
+
+In ``FORLOOP``, a jump is made back to the start of the loop body if the limit has not been reached or exceeded. The sense of the comparison depends on whether the stepping is negative or positive, hence the “<?=” operator. Jumps for both instructions are encoded as signed displacements in the ``sBx`` field. An empty loop has a ``FORLOOP`` ``sBx`` value of -1.
+
+``FORLOOP`` also sets R(A+3), the external loop index that is local to the loop block. This is significant if the loop index is used as an upvalue (see below.) R(A), R(A+1) and R(A+2) are not visible to the programmer.
+
+The loop variable ends with the last value before the limit is reached (unlike C) because it is not updated unless the jump is made. However, since loop variables are local to the loop itself, you should not be able to use it unless you cook up an implementation-specific hack.
+
+Examples
+--------
+For the sake of efficiency, ``FORLOOP`` contains a lot of functionality, so when a loop iterates, only one instruction, ``FORLOOP``, is needed. Here is a simple example::
+
+  f=load('local a = 0; for i = 1,100,5 do a = a + i end')
+
+Generates::
+
+  main <(string):0,0> (8 instructions at 000001E9F0DF52F0)
+  0+ params, 5 slots, 1 upvalue, 5 locals, 4 constants, 0 functions
+        1       [1]     LOADK           0 -1    ; 0
+        2       [1]     LOADK           1 -2    ; 1
+        3       [1]     LOADK           2 -3    ; 100
+        4       [1]     LOADK           3 -4    ; 5
+        5       [1]     FORPREP         1 1     ; to 7
+        6       [1]     ADD             0 0 4
+        7       [1]     FORLOOP         1 -2    ; to 6
+        8       [1]     RETURN          0 1
+  constants (4) for 000001E9F0DF52F0:
+        1       0
+        2       1
+        3       100
+        4       5
+  locals (5) for 000001E9F0DF52F0:
+        0       a       2       9
+        1       (for index)     5       8
+        2       (for limit)     5       8
+        3       (for step)      5       8
+        4       i       6       7
+  upvalues (1) for 000001E9F0DF52F0:
+        0       _ENV    1       0
+
+In the above example, notice that the ``for`` loop causes three additional local pseudo-variables (or internal variables) to be defined, apart from the external loop index, ``i``. The three pseudovariables, named ``(for index)``, ``(for limit)`` and ``(for step)`` are required to completely specify the state of the loop, and are not visible to Lua source code. They are arranged in consecutive registers, with the external loop index given by R(A+3) or register 4 in the example.
+
+The loop body is in line [6] while line [7] is the ``FORLOOP`` instruction that steps through the loop state. The ``sBx`` field of ``FORLOOP`` is negative, as it always jumps back to the beginning of the loop body.
+
+Lines [2]–[4] initialize the three register locations where the loop state will be stored. If the loop step is not specified in the Lua source, a constant 1 is added to the constant pool and a ``LOADK`` instruction is used to initialize the pseudo-variable ``(for step)`` with the loop step.
+
+``FORPREP`` in lines [5] makes a negative loop step and jumps to line [7] for the initial test. In the example, at line [5], the internal loop index (at register 1) will be (1-5) or -4. When the virtual machine arrives at the ``FORLOOP`` in line [7] for the first time, one loop step is made prior to the first test, so the initial value that is actually tested against the limit is (-4+5) or 1. Since 1 < 100, an iteration will be performed. The external loop index ``i`` is then set to 1 and a jump is made to line [6], thus starting the first iteration of the loop.
+
+The loop at line [6]–[7] repeats until the internal loop index exceeds the loop limit of 100. The conditional jump is not taken when that occurs and the loop ends. Beyond the scope of the loop body, the loop state (``(for index)``, ``(for limit)``, ``(for step)`` and ``i``) is not valid. This is determined by the parser and code generator. The range of PC values for which the loop state variables are valid is located in the locals list. 
+
+Here is another example::
+
+  f=load('for i = 10,1,-1 do if i == 5 then break end end')
+
+This leads to::
+
+  main <(string):0,0> (8 instructions at 000001E9F0DEC110)
+  0+ params, 4 slots, 1 upvalue, 4 locals, 4 constants, 0 functions
+        1       [1]     LOADK           0 -1    ; 10
+        2       [1]     LOADK           1 -2    ; 1
+        3       [1]     LOADK           2 -3    ; -1
+        4       [1]     FORPREP         0 2     ; to 7
+        5       [1]     EQ              1 3 -4  ; - 5
+        6       [1]     JMP             0 1     ; to 8
+        7       [1]     FORLOOP         0 -3    ; to 5
+        8       [1]     RETURN          0 1
+  constants (4) for 000001E9F0DEC110:
+        1       10
+        2       1
+        3       -1
+        4       5
+  locals (4) for 000001E9F0DEC110:
+        0       (for index)     4       8
+        1       (for limit)     4       8
+        2       (for step)      4       8
+        3       i       5       7
+  upvalues (1) for 000001E9F0DEC110:
+        0       _ENV    1       0
+
+In the second loop example above, except for a negative loop step size, the structure of the loop is identical. The body of the loop is from line [5] to line [7]. Since no additional stacks or states are used, a break translates simply to a ``JMP`` instruction (line [6]). There is nothing to clean up after a ``FORLOOP`` ends or after a ``JMP`` to exit a loop.
+
+
+OP_TFORCALL and OP_TFORLOOP instructions
+========================================
+
+Syntax
+------
+::
+
+  TFORCALL    A C        R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2))
+  TFORLOOP    A sBx      if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }
+
+Description
+-----------
+Apart from a numeric ``for`` loop (implemented by ``FORPREP`` and ``FORLOOP``), Lua has a generic ``for`` loop, implemented by ``TFORCALL`` and ``TFORLOOP``.
+
+The generic ``for`` loop keeps 3 items in consecutive register locations to keep track of things. R(A) is the iterator function, which is called once per loop. R(A+1) is the state, and R(A+2) is the control variable. At the start, R(A+2) has an initial value. R(A), R(A+1) and R(A+2) are internal to the loop and cannot be accessed by the programmer.
+
+In addition to these internal loop variables, the programmer specifies one or more loop variables that are external and visible to the programmer. These loop variables reside at locations R(A+3) onwards, and their count is specified in operand C. Operand C must be at least 1. They are also local to the loop body, like the external loop index in a numerical for loop.
+
+Each time ``TFORCALL`` executes, the iterator function referenced by R(A) is called with two arguments: the state and the control variable (R(A+1) and R(A+2)). The results are returned in the local loop variables, from R(A+3) onwards, up to R(A+2+C).
+
+Next, the ``TFORLOOP`` instruction tests the first return value, R(A+3). If it is nil, the iterator loop is at an end, and the ``for`` loop block ends by simply moving to the next instruction.
+
+If R(A+3) is not nil, there is another iteration, and R(A+3) is assigned as the new value of the control variable, R(A+2). Then the ``TFORLOOP`` instruction sends execution back to the beginning of the loop (the ``sBx`` operand specifies how many instructions to move to get to the start of the loop body). 
+
+
+Examples
+--------
+This example has a loop with one additional result (``v``) in addition to the loop enumerator (``i``)::
+
+  f=load('for i,v in pairs(t) do print(i,v) end')
+
+This produces::
+
+  main <(string):0,0> (11 instructions at 0000014DB7FD2610)
+  0+ params, 8 slots, 1 upvalue, 5 locals, 3 constants, 0 functions
+        1       [1]     GETTABUP        0 0 -1  ; _ENV "pairs"
+        2       [1]     GETTABUP        1 0 -2  ; _ENV "t"
+        3       [1]     CALL            0 2 4
+        4       [1]     JMP             0 4     ; to 9
+        5       [1]     GETTABUP        5 0 -3  ; _ENV "print"
+        6       [1]     MOVE            6 3
+        7       [1]     MOVE            7 4
+        8       [1]     CALL            5 3 1
+        9       [1]     TFORCALL        0 2
+        10      [1]     TFORLOOP        2 -6    ; to 5
+        11      [1]     RETURN          0 1
+  constants (3) for 0000014DB7FD2610:
+        1       "pairs"
+        2       "t"
+        3       "print"
+  locals (5) for 0000014DB7FD2610:
+        0       (for generator) 4       11
+        1       (for state)     4       11
+        2       (for control)   4       11
+        3       i       5       9
+        4       v       5       9
+  upvalues (1) for 0000014DB7FD2610:
+        0       _ENV    1       0
+
+
+The iterator function is located in register 0, and is named ``(for generator)`` for debugging purposes. The state is in register 1, and has the name ``(for state)``. The control variable, ``(for control)``, is contained in register 2. These correspond to locals R(A), R(A+1) and R(A+2) in the ``TFORCALL`` description. Results from the iterator function call is placed into register 3 and 4, which are locals ``i`` and ``v``, respectively. On line [9], the operand C of ``TFORCALL`` is 2, corresponding to two iterator variables (``i`` and ``v``).
+
+Lines [1]–[3] prepares the iterator state. Note that the call to the ``pairs()`` standard library function has 1 parameter and 3 results. After the call in line [3], register 0 is the iterator function (which by default is the Lua function ``next()`` unless ``__pairs`` meta method has been overriden), register 1 is the loop state, register 2 is the initial value of the control variable (which is ``nil`` in the default case). The iterator variables ``i`` and ``v`` are both invalid at the moment, because we have not entered the loop yet.
+
+Line [4] is a ``JMP`` to ``TFORCALL`` on line [9]. The ``TFORCALL`` instruction calls the iterator function, generating the first set of enumeration results in locals ``i`` and ``v``. 
+
+The ``TFORLOOP`` insruction executes and checks whether ``i`` is ``nil``. If it is not ``nil``, then the internal control variable (register 2) is set to the value in ``i`` and control goes back to to the start of the loop body (lines [5]–[8]).
+
+The body of the generic ``for`` loop executes (``print(i,v)``) and then ``TFORCALL`` is encountered again, calling the iterator function to get the next iteration state. Finally, when the ``TFORLOOP`` finds that the first result from the iterator is ``nil``, the loop ends, and execution continues on line [11].
+
+
+OP_GETUPVAL and OP_SETUPVAL instructions
+========================================
+
+Syntax
+------
+::
+
+  GETUPVAL  A B     R(A) := UpValue[B]  
+  SETUPVAL  A B     UpValue[B] := R(A)
+
+Description
+-----------
+
+``GETUPVAL`` copies the value in upvalue number ``B`` into register ``R(A)``. Each Lua function may have its own upvalue list. This upvalue list is internal to the virtual machine; the list of upvalue name strings in a prototype is not mandatory.
+
+``SETUPVAL`` copies the value from register ``R(A)`` into the upvalue number ``B`` in the upvalue list for that function.
+
+Examples
+--------
+``GETUPVAL`` and ``SETUPVAL`` instructions use internally-managed upvalue lists. The list of upvalue name strings that are found in a function prototype is for debugging purposes; it is not used by the Lua virtual machine and can be stripped by ``luac``.
+During execution, upvalues are set up by a ``CLOSURE``, and maintained by the Lua virtual machine. In the following example, function ``b`` is declared inside the main chunk, and is shown in the disassembly as a function prototype within a function prototype. The indentation, which is not in the original output, helps to visually separate the two functions.
+
+::
+
+  f=load('local a; function b() a = 1 return a end')
+
+Leads to::
+
+  main <(string):0,0> (4 instructions at 000002853D5177F0)
+  0+ params, 2 slots, 1 upvalue, 1 local, 1 constant, 1 function
+        1       [1]     LOADNIL         0 0
+        2       [1]     CLOSURE         1 0     ; 000002853D517920
+        3       [1]     SETTABUP        0 -1 1  ; _ENV "b"
+        4       [1]     RETURN          0 1
+  constants (1) for 000002853D5177F0:
+        1       "b"
+  locals (1) for 000002853D5177F0:
+        0       a       2       5
+  upvalues (1) for 000002853D5177F0:
+        0       _ENV    1       0
+
+    function <(string):1,1> (5 instructions at 000002853D517920)
+    0 params, 2 slots, 1 upvalue, 0 locals, 1 constant, 0 functions
+          1       [1]     LOADK           0 -1    ; 1
+          2       [1]     SETUPVAL        0 0     ; a
+          3       [1]     GETUPVAL        0 0     ; a
+          4       [1]     RETURN          0 2
+          5       [1]     RETURN          0 1
+    constants (1) for 000002853D517920:
+          1       1
+    locals (0) for 000002853D517920:
+    upvalues (1) for 000002853D517920:
+          0       a       1       0
+
+In the main chunk, the local ``a`` starts as a ``nil``. The ``CLOSURE`` instruction in line [2] then instantiates a function closure with a single upvalue, ``a``. In line [3] the closure is assigned to global ``b`` via the ``SETTABUP`` instruction.
+
+In function ``b``, there is a single upvalue, `a`. In Pascal, a variable in an outer scope is found by traversing stack frames. However, instantiations of Lua functions are first-class values, and they may be assigned to a variable and referenced elsewhere. Moreover, a single prototype may have multiple instantiations. Managing upvalues thus becomes a little more tricky than traversing stack frames in Pascal. The Lua virtual machine solution is to provide a clean interface to access upvalues via ``GETUPVAL`` and ``SETUPVAL``, while the management of upvalues is handled by the virtual machine itself.
+
+Line [2] in function ``b`` sets upvalue a (upvalue number 0 in the upvalue table) to a number value of ``1`` (held in temporary register ``0``.) In line [3], the value in upvalue ``a`` is retrieved and placed into register ``0``, where the following ``RETURN`` instruction will use it as a return value. The ``RETURN`` in line [5] is unused.
+
+
+
+
+

@@ -800,6 +800,8 @@ class RaviCodeGenerator {
     RaviFunctionDef *def, llvm::Value *value_type, LuaTypeCode lua_typecode,
     const char *varname = "value.not.typeof");
 
+  // emit code for LClosure *cl = clLvalue(ci->func)
+  // this is same as:
   // emit code for (LClosure *)ci->func->value_.gc
   llvm::Instruction *emit_gep_ci_func_value_gc_asLClosure(RaviFunctionDef *def);
 
@@ -862,25 +864,39 @@ class RaviCodeGenerator {
   llvm::Instruction *emit_load_reg_h(RaviFunctionDef *def, llvm::Value *ra);
 
   // Gets the size of the hash table
+  // This is the sizenode() macro in lobject.h
   llvm::Value *emit_table_get_hashsize(RaviFunctionDef *def,
                                        llvm::Value *table);
 
-  // Gets the location of the hash node for given key and table size
+  // Gets the location of the hash node for given string key
+  // return value is the offset into the node array
   llvm::Value *emit_table_get_hashstr(RaviFunctionDef *def, llvm::Value *table,
                                       TString *key);
 
+  // Gets access to the Table's node array (t->node)
   llvm::Value *emit_table_get_nodearray(RaviFunctionDef *def,
                                         llvm::Value *table);
 
+  // Given a pointer to table's node array (node = t->node) and
+  // the location of the hashed key (index), this method retrieves the
+  // type of the value stored at the node - return value is of type int
+  // and is the type information stored in TValue->tt field.
   llvm::Value *emit_table_get_keytype(RaviFunctionDef *def, llvm::Value *node,
                                       llvm::Value *index);
 
+  // Given a pointer to table's node array (node = t->node) and
+  // the location of the hashed key (index), this method retrieves the
+  // the string value stored at the node - return value is of type TString*
   llvm::Value *emit_table_get_strkey(RaviFunctionDef *def, llvm::Value *node,
                                      llvm::Value *index);
 
+  // Given a pointer to table's node array (node = t->node) and
+  // the location of the hashed key (index), this method retrieves the
+  // the pointer to value stored at the node - return value is of type TValue*
   llvm::Value *emit_table_get_value(RaviFunctionDef *def, llvm::Value *node,
                                     llvm::Value *index);
 
+  // Gets the size of the table's array part
   llvm::Value *emit_table_get_arraysize(RaviFunctionDef *def,
                                         llvm::Value *table);
 

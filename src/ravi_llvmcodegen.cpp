@@ -73,7 +73,7 @@ llvm::CallInst *RaviCodeGenerator::CreateCall3(llvm::IRBuilder<> *builder,
                                                llvm::Value *arg1,
                                                llvm::Value *arg2,
                                                llvm::Value *arg3) {
-  llvm::SmallVector<llvm::Value *, 2> values;
+  llvm::SmallVector<llvm::Value *, 3> values;
   values.push_back(arg1);
   values.push_back(arg2);
   values.push_back(arg3);
@@ -83,7 +83,7 @@ llvm::CallInst *RaviCodeGenerator::CreateCall3(llvm::IRBuilder<> *builder,
 llvm::CallInst *RaviCodeGenerator::CreateCall4(
     llvm::IRBuilder<> *builder, llvm::Value *func, llvm::Value *arg1,
     llvm::Value *arg2, llvm::Value *arg3, llvm::Value *arg4) {
-  llvm::SmallVector<llvm::Value *, 2> values;
+  llvm::SmallVector<llvm::Value *, 4> values;
   values.push_back(arg1);
   values.push_back(arg2);
   values.push_back(arg3);
@@ -95,7 +95,7 @@ llvm::CallInst *RaviCodeGenerator::CreateCall5(
     llvm::IRBuilder<> *builder, llvm::Value *func, llvm::Value *arg1,
     llvm::Value *arg2, llvm::Value *arg3, llvm::Value *arg4,
     llvm::Value *arg5) {
-  llvm::SmallVector<llvm::Value *, 2> values;
+  llvm::SmallVector<llvm::Value *, 5> values;
   values.push_back(arg1);
   values.push_back(arg2);
   values.push_back(arg3);
@@ -148,10 +148,10 @@ llvm::Value *RaviCodeGenerator::emit_array_get(RaviFunctionDef *def,
       ptr, llvm::ConstantInt::get(def->types->C_intT, offset));
 }
 
+// emit code for LClosure *cl = clLvalue(ci->func);
 llvm::Instruction *RaviCodeGenerator::emit_gep_ci_func_value_gc_asLClosure(
     RaviFunctionDef *def) {
-  // emit code for
-  // LClosure *cl = clLvalue(ci->func);
+
   // clLvalue() is a macros that expands to (LClosure *)ci->func->value_.gc
   // via a complex series of macros and unions
   // fortunately as func is at the beginning of the CallInfo
@@ -284,6 +284,7 @@ llvm::Value *RaviCodeGenerator::emit_load_register_or_constant_n(
   }
 }
 
+// emit code to load the lua_Number value from register (TValue)
 llvm::Instruction *RaviCodeGenerator::emit_load_reg_n(RaviFunctionDef *def,
                                                       llvm::Value *rb) {
   llvm::Value *rb_n = def->builder->CreateBitCast(rb, def->types->plua_NumberT);
@@ -293,6 +294,7 @@ llvm::Instruction *RaviCodeGenerator::emit_load_reg_n(RaviFunctionDef *def,
   return lhs;
 }
 
+// emit code to load the lua_Integer value from register (TValue)
 llvm::Instruction *RaviCodeGenerator::emit_load_reg_i(RaviFunctionDef *def,
                                                       llvm::Value *rb) {
   llvm::Value *rb_n =
@@ -302,6 +304,7 @@ llvm::Instruction *RaviCodeGenerator::emit_load_reg_i(RaviFunctionDef *def,
   return lhs;
 }
 
+// emit code to load the boolean value from register (TValue)
 llvm::Instruction *RaviCodeGenerator::emit_load_reg_b(RaviFunctionDef *def,
                                                       llvm::Value *rb) {
   llvm::Value *rb_n = def->builder->CreateBitCast(rb, def->types->C_pintT);
@@ -310,6 +313,7 @@ llvm::Instruction *RaviCodeGenerator::emit_load_reg_b(RaviFunctionDef *def,
   return lhs;
 }
 
+// emit code to load the table value from register (TValue)
 llvm::Instruction *RaviCodeGenerator::emit_load_reg_h(RaviFunctionDef *def,
                                                       llvm::Value *rb) {
   llvm::Value *rb_h = def->builder->CreateBitCast(rb, def->types->ppTableT);
@@ -318,6 +322,8 @@ llvm::Instruction *RaviCodeGenerator::emit_load_reg_h(RaviFunctionDef *def,
   return h;
 }
 
+// Gets the size of the hash table
+// This is the sizenode() macro in lobject.h
 llvm::Value *RaviCodeGenerator::emit_table_get_hashsize(RaviFunctionDef *def,
                                                         llvm::Value *t) {
   // Obtain the lsizenode  of the hash table
@@ -334,6 +340,8 @@ llvm::Value *RaviCodeGenerator::emit_table_get_hashsize(RaviFunctionDef *def,
   return size;
 }
 
+// Gets the location of the hash node for given string key
+// return value is the offset into the node array
 llvm::Value *RaviCodeGenerator::emit_table_get_hashstr(RaviFunctionDef *def,
                                                        llvm::Value *table,
                                                        TString *key) {
@@ -347,6 +355,7 @@ llvm::Value *RaviCodeGenerator::emit_table_get_hashstr(RaviFunctionDef *def,
   return offset;
 }
 
+// Gets access to the Table's node array (t->node)
 llvm::Value *RaviCodeGenerator::emit_table_get_nodearray(RaviFunctionDef *def,
                                                          llvm::Value *table) {
   // Get access to the node array
@@ -356,6 +365,10 @@ llvm::Value *RaviCodeGenerator::emit_table_get_nodearray(RaviFunctionDef *def,
   return node;
 }
 
+// Given a pointer to table's node array (node = t->node) and
+// the location of the hashed key (index), this method retrieves the
+// type of the value stored at the node - return value is of type int
+// and is the type information stored in TValue->tt field.
 llvm::Value *RaviCodeGenerator::emit_table_get_keytype(RaviFunctionDef *def,
                                                        llvm::Value *node,
                                                        llvm::Value *index) {
@@ -365,6 +378,9 @@ llvm::Value *RaviCodeGenerator::emit_table_get_keytype(RaviFunctionDef *def,
   return ktype;
 }
 
+// Given a pointer to table's node array (node = t->node) and
+// the location of the hashed key (index), this method retrieves the
+// the string value stored at the node - return value is of type TString*
 llvm::Value *RaviCodeGenerator::emit_table_get_strkey(RaviFunctionDef *def,
                                                       llvm::Value *node,
                                                       llvm::Value *index) {
@@ -376,12 +392,16 @@ llvm::Value *RaviCodeGenerator::emit_table_get_strkey(RaviFunctionDef *def,
   return keyvalue;
 }
 
+// Given a pointer to table's node array (node = t->node) and
+// the location of the hashed key (index), this method retrieves the
+// the pointer to value stored at the node - return value is of type TValue*
 llvm::Value *RaviCodeGenerator::emit_table_get_value(RaviFunctionDef *def,
                                                      llvm::Value *node,
                                                      llvm::Value *index) {
   return emit_gep(def, "nodeval", node, index, 0);
 }
 
+// Gets the size of the table's array part
 llvm::Value *RaviCodeGenerator::emit_table_get_arraysize(RaviFunctionDef *def,
                                                          llvm::Value *table) {
   // Obtain the lsizenode  of the hash table
