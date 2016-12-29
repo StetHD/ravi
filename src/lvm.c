@@ -1104,6 +1104,7 @@ int luaV_execute (lua_State *L) {
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setfltvalue(ra, luai_numadd(L, nb, nc));
         }
+#endif
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_ADD)); }
       } break;
       case OP_SUB: {
@@ -1149,6 +1150,7 @@ int luaV_execute (lua_State *L) {
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setfltvalue(ra, luai_numsub(L, nb, nc));
         }
+#endif
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SUB)); }
       } break;
       case OP_MUL: {
@@ -1194,6 +1196,7 @@ int luaV_execute (lua_State *L) {
         else if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setfltvalue(ra, luai_nummul(L, nb, nc));
         }
+#endif
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_MUL)); }
       } break;
       case OP_DIV: { /* float division (always with floats) */
